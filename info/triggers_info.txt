@@ -1,0 +1,21 @@
+Fixation (empieza el ensayo) - 1
+ISI1 - 4
+Mask - 5
+ISI - 6
+ITI - 7
+Gabor - 10
+
+Target Present - 76
+Target Absent - 77
+
+BlockType Localizer - 70
+BlockType Experimental - 71
+
+Tilt correct - 50
+Tilt incorrect - 51
+
+Present/Seen - 55
+Absent/Unseen - 56
+Absent/Seen (False Alarm) - 57
+Error task - 58
+Present/Unseen - 59
