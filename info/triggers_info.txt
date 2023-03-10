@@ -1,4 +1,4 @@
-Fixation (empieza el ensayo) - 1
+Fixation (trial starts) - 1
 ISI1 - 4
 Mask - 5
 ISI - 6
