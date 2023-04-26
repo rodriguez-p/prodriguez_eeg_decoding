@@ -1,7 +1,7 @@
 """
 Author: Pablo Rodríguez-San Esteban (prodriguez@ugr.es)
 
-Defines and runs functions for the temporal decoding on the epoched data.
+Defines and runs functions for the temporal decoding on the epoched data from the experimental blocks.
 """
 
 # import packages
