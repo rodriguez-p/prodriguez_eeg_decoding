@@ -45,8 +45,8 @@ def temporal_decoding(id):
         epochs = epochs['Tilt Right', 'Tilt Left']
 
     # select data (X) and labels (y) from epochs
-    X = epochs_PA.get_data()
-    y = epochs_PA.events[:,-1]
+    X = epochs.get_data()
+    y = epochs.events[:,-1]
 
     # define the classifier pipeline
     clf = make_pipeline(Vectorizer(), StandardScaler(), SVC(kernel='linear', probability=True, class_weight="balanced", max_iter=-1))
