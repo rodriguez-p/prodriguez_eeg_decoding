@@ -81,11 +81,13 @@ for m in models:
             if id == 11 or id == 24 or id == 26:
                 pass
             else:
-                mean_scores_gen = blocks_generalization(id, c)
+                mean_scores_gen = blocks_generalization(id, c, m)
+                np.save("{}/S{}_block_generalization_{}_{}.npy".format(SAVE_DATA, id, c, m)) # save subject data
+
                 if np.any(scores_gen):
                     scores_gen = np.vstack((scores_gen, mean_scores_gen))
                 else:
                     scores_gen = mean_scores_gen
 
 #%% save data to files
-np.save("{}/{}".format(SAVE_DATA, 'gen_loc_exp_tfr.npy'), scores_gen, allow_pickle=True, fix_imports=True)
+np.save("{}/block_generalization_{}_{}.npy".format(SAVE_DATA, c, m), scores_gen, allow_pickle=True, fix_imports=True)
