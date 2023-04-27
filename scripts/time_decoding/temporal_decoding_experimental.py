@@ -1,7 +1,7 @@
 """
 Author: Pablo Rodríguez-San Esteban (prodriguez@ugr.es)
 
-Defines and runs functions for the temporal decoding on the epoched data from the experimental blocks.
+Defines and runs functions for the temporal decoding on the epoched data for the experimental blocks.
 """
 
 # import packages
@@ -10,10 +10,10 @@ import numpy as np
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 import mne
-from mne.decoding import (SlidingEstimator, GeneralizingEstimator, Scaler,
-                          cross_val_multiscore, Vectorizer, CSP)
+from mne.decoding import (SlidingEstimator, cross_val_multiscore, Vectorizer)
 
 # set up directories
 DATA_EPOCH = '../epochdata' # directory where our epoched data is stored
@@ -21,7 +21,7 @@ SAVE_DATA = '../epochdata/temporal_decoding' # folder to save our data after run
 FILE_PREFIX = 'PRODRIGUEZ_' # prefix of the files, set up during BrainVision recording
 
 # define the temporal decoding functions
-def temporal_decoding(id):
+def temporal_decoding(id, condition, model):
     # read epoched data
     epochs = mne.read_epochs("{}/{}{:06d}-epo.fif".format(DATA_EPOCH, FILE_PREFIX, id))
 
@@ -49,7 +49,11 @@ def temporal_decoding(id):
     y = epochs.events[:,-1]
 
     # define the classifier pipeline
-    clf = make_pipeline(Vectorizer(), StandardScaler(), SVC(kernel='linear', probability=True, class_weight="balanced", max_iter=-1))
+    if model == 'lsvm':
+        clf = make_pipeline(Vectorizer(), StandardScaler(), SVC(kernel='linear', probability=True, class_weight="balanced", max_iter=-1))
+
+    elif model == 'lda':
+        clf = make_pipeline(Vectorizer(), StandardScaler(), LinearDiscriminantAnalysis())
 
     # apply the slidingestimator to fit and test classifier across all time points
     time_decod = SlidingEstimator(clf, n_jobs=-1, scoring='roc_auc', verbose=True)
@@ -64,19 +68,21 @@ def temporal_decoding(id):
 # run classifier across subjects for the different conditions
 avg_td = None
 conditions = ['presence', 'awareness', 'tilt']
+models = ['lsvm', 'lda']
 
-for c in conditions:
-    for id in range(10, 43): # the range of all our subjects, in this case (10, 43)
-        if id == 11 or id == 24 or id == 26: # indicate subjects excluded from the analysis
-            pass
-        else:
-            mean_scores_id = temporal_decoding(id, c)
-            np.save("{}/S{}_temporal_decoding_{}_experimental.npy".format(SAVE_DATA, id, c)) # save subject data
-
-            if np.any(avg_td):
-                avg_td = np.vstack((avg_td, mean_scores_id))
+for m in models:
+    for c in conditions:
+        for id in range(10, 43): # the range of all our subjects, in this case (10, 43)
+            if id == 11 or id == 24 or id == 26: # indicate subjects excluded from the analysis
+                pass
             else:
-                avg_td = mean_scores_id
+                mean_scores_id = temporal_decoding(id, c, m)
+                np.save("{}/S{}_temporal_decoding_{}_{}_experimental.npy".format(SAVE_DATA, id, c, m)) # save subject data
+
+                if np.any(avg_td):
+                    avg_td = np.vstack((avg_td, mean_scores_id))
+                else:
+                    avg_td = mean_scores_id
 
 # save group data
-np.save("{}/temporal_decoding_{}_experimental.npy".format(SAVE_DATA, c), avg_td, allow_pickle=True, fix_imports=True)
+np.save("{}/temporal_decoding_{}_{}_experimental.npy".format(SAVE_DATA, c, m), avg_td, allow_pickle=True, fix_imports=True)

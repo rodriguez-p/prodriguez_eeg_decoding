@@ -9,8 +9,10 @@ import numpy as np
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+
 import mne
-from mne.decoding import (SlidingEstimator, cross_val_multiscore, Vectorizer, GeneralizingEstimator)
+from mne.decoding import (GeneralizingEstimator, cross_val_multiscore, Vectorizer)
 
 
 # set up directories
@@ -19,7 +21,7 @@ SAVE_DATA = '../epochdata/temporal_decoding' # folder to save our data after run
 FILE_PREFIX = 'PRODRIGUEZ_' # prefix of the files, set up during BrainVision recording
 
 # define functions
-def temporal_generalization(id, condition):
+def temporal_generalization(id, condition, model):
 
     # read epoched data
     epochs = mne.read_epochs("{}/{}{:06d}-epo.fif".format(DATA_LOCALIZER, FILE_PREFIX, id))
@@ -48,7 +50,11 @@ def temporal_generalization(id, condition):
     y = epochs.events[:,-1]
 
     # define the classifier pipeline
-    clf = make_pipeline(Vectorizer(), StandardScaler(), SVC(kernel='linear', probability=True, class_weight="balanced", max_iter=-1))
+    if model == 'lsvm':
+        clf = make_pipeline(Vectorizer(), StandardScaler(), SVC(kernel='linear', probability=True, class_weight="balanced", max_iter=-1))
+
+    elif model == 'lda':
+        clf = make_pipeline(Vectorizer(), StandardScaler(), LinearDiscriminantAnalysis())
 
     # apply MNE GeneralizingEstimator
     time_gen = GeneralizingEstimator(clf, n_jobs=-1, scoring='roc_auc', verbose=True)
@@ -63,19 +69,21 @@ def temporal_generalization(id, condition):
 # run classifier across subjects for the different conditions
 avg_tg = []
 conditions = ['presence', 'awareness', 'tilt']
+models = ['lsvm', 'lda']
 
-for c in conditions:
-    for id in range(13, 43): # the range of all our subjects, in this case (10, 43)
-        if id == 11 or id == 24 or id == 26: # indicate subjects excluded from the analysis
-            pass
-        else:
-            mean_scores_tg = temporal_generalization(id, c)
-            np.save("{}/S{}_temporal-generalization_{}_experimental.npy".format(SAVE_DATA, id, c), mean_scores_tg, allow_pickle=True, fix_imports=True) # save subject data
-
-            if np.any(avg_tg):
-                avg_tg = np.vstack((avg_tg, mean_scores_tg))
+for m in models:
+    for c in conditions:
+        for id in range(13, 43): # the range of all our subjects, in this case (10, 43)
+            if id == 11 or id == 24 or id == 26: # indicate subjects excluded from the analysis
+                pass
             else:
-                avg_tg = mean_scores_tg
+                mean_scores_tg = temporal_generalization(id, c, m)
+                np.save("{}/S{}_temporal-generalization_{}_{}_experimental.npy".format(SAVE_DATA, id, c, m), mean_scores_tg, allow_pickle=True, fix_imports=True) # save subject data
+
+                if np.any(avg_tg):
+                    avg_tg = np.vstack((avg_tg, mean_scores_tg))
+                else:
+                    avg_tg = mean_scores_tg
 
 # save group data
-np.save("{}/group_temporal-generalization_{}_experimental.npy".format(SAVE_DATA, c), avg_tg, allow_pickle=True, fix_imports=True)
+np.save("{}/group_temporal-generalization_{}_{}_experimental.npy".format(SAVE_DATA, c, m), avg_tg, allow_pickle=True, fix_imports=True)
