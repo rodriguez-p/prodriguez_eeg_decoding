@@ -1,0 +1,89 @@
+"""
+Author: Pablo Rodríguez-San Esteban (prodriguez@ugr.es)
+
+Defines and runs functions for the time-frequency decoding on the epoched data for the experimental blocks.
+"""
+
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+import mne
+from mne.decoding import (SlidingEstimator, cross_val_multiscore, Vectorizer)
+import numpy as np
+
+# set up directories
+DATA_EPOCH='../data/epochdata/' # directory where our epoched data is stored
+DATA_TFR = '../data/time-frequency' # directory where the decoding scores will be saved
+SAVE_DATA = '../epochdata/temporal_decoding' # directory to save our data after running the decoding analyses
+FILE_PREFIX = 'PRODRIGUEZ_' # prefix of the files, set up during BrainVision recording
+
+# define functions
+def decoding_timefrequency(id, condition, model):
+    SUBJECT = id
+    epochs = mne.read_epochs("{}/{}{:06d}-epo.fif".format(DATA_EPOCH, FILE_PREFIX, SUBJECT))
+
+    # select the condition to load (target presence, awareness or tilt orientation)
+    if condition == 'presence':
+        epochs_present = mne.epochs.combine_event_ids(epochs['Present/Seen/Left', 'Present/Seen/Right'], ['Present/Seen/Left', 'Present/Seen/Right'], {'Present': 100})
+        epochs_absent = mne.epochs.combine_event_ids(epochs['Absent/Seen', 'Absent/Unseen'], ['Absent/Seen', 'Absent/Unseen'], {'Absent': 101})
+        epochs = mne.concatenate_epochs([epochs_present, epochs_absent], add_offset=True)
+        epochs = epochs['Present', 'Absent']
+
+    elif condition == 'awareness':
+        epochs_seen = mne.epochs.combine_event_ids(epochs['Present/Seen/Left', 'Present/Seen/Right'],['Present/Seen/Left', 'Present/Seen/Right'], {'Present/Seen': 100})
+        epochs_unseen = mne.epochs.combine_event_ids(epochs['Present/Unseen/Left', 'Present/Unseen/Right'],['Present/Unseen/Left', 'Present/Unseen/Right'], {'Present/Unseen': 101})
+        epochs = mne.concatenate_epochs([epochs_seen, epochs_unseen], add_offset=True)
+        epochs = epochs['Present/Seen', 'Present/Unseen']
+
+    elif condition == 'tilt':
+        epochs_right = mne.epochs.combine_event_ids(epochs['Present/Seen/Right'], ['Present/Seen/Right'], {'Tilt Right': 100})
+        epochs_left = mne.epochs.combine_event_ids(epochs['Present/Seen/Left'], ['Present/Seen/Left'], {'Tilt Left': 101})
+        epochs = mne.concatenate_epochs([epochs_right, epochs_left], add_offset=True)
+        epochs = epochs['Tilt Right', 'Tilt Left']
+
+    # load tfr files
+    power = mne.time_frequency.read_tfrs('{}/S10_presence_power_multitaper-tfr.h5'.format(DATA_TFR))
+    power = power[0]
+
+    # transforms data from (n_trials, n_channels, n_frequencies, n_times) to (n_trials, n_channels, n_time-frequency); adapted from https://github.com/kingjr/decod_unseen_maintenance/
+
+    tfr = power.data
+    n_trial, n_chan, n_freq, n_time = tfr.shape
+    tfr = np.reshape(tfr, [n_trial, n_chan, n_freq * n_time])
+    tfr.data
+
+    # select data (X) from power and labels (y) from epochs
+    X = tfr
+    y = epochs.events[:,-1]
+
+    # define the classifier pipeline
+    if model == 'lsvm':
+        clf = make_pipeline(Vectorizer(), StandardScaler(), SVC(kernel='linear', probability=True, class_weight="balanced", max_iter=-1))
+
+    elif model == 'lda':
+        clf = make_pipeline(Vectorizer(), StandardScaler(), LinearDiscriminantAnalysis())
+
+    # apply the SlidingEstimator to fit and test classifier across all time-frequency points
+    time_decod = SlidingEstimator(clf, n_jobs=-1, scoring='roc_auc', verbose=True)
+
+    # define cv folds, default is 5, can be 3 for speed
+    scores_td = cross_val_multiscore(time_decod, X, y, cv=10, n_jobs=-1)
+
+    # compute mean scores across cross-validation splits
+    mean_scores_td = np.mean(scores_td, axis=0)
+    return mean_scores_td
+
+# run the function across subjects
+conditions = ['presence', 'awareness', 'tilt']
+models = ['lsvm', 'lda']
+
+for m in models:
+    for c in conditions:
+        for id in range(10, 43):
+            if id == 11 or id == 24 or id == 26:
+                pass
+            else:
+                scores_tfd = decoding_timefrequencyF(id, c, m)
+                np.save("{}/decoding_time-frequency_{}_{}.npy".format(DECOD_TFR, c, m), scores_tfd, allow_pickle=True, fix_imports=True)
