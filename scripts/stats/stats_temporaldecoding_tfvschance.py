@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import sem
-from stats import wilcoxon_fdr
-from utils import load_scores
+from stats_functions import wilcoxon_fdr_tempdecod
+from utils_functions import load_scores
 
 #%%
 FIGURES_DIR = 'C:/Users/Profa. Ana Chica/Desktop/prodriguez_eeg_decoding/figures'
@@ -14,7 +14,7 @@ times= np.load("{}/{}".format(PKL_PATH, 'times.npy'), allow_pickle=True)
 
 #%% target presence 
 
-presence_tf = load_scores(DECOD_TFR, 'temporal_decoding_time-frequency_presence_lsvm')
+presence_tf = load_scores(DECOD_TFR, 'temporal_decoding_time-frequency_presence_lsvm', average = False)
 
 presence_tf_se = np.mean(sem(presence_tf), axis = 0)
 presence_tf_avg = np.mean(presence_tf, axis = 0)
@@ -23,11 +23,11 @@ presence_tf_avg = np.mean(presence_tf, axis = 0)
 x = presence_tf
 y = np.full((30, 1024), 0.5)
 
-reject, p_corrected, presence_sign_points = wilcoxon_fdr(x, y, times)
+reject, p_corrected, presence_sign_points = wilcoxon_fdr_tempdecod(x, y, times)
 
 #%% subject awareness
 
-awareness_tf = load_scores(DECOD_TFR, 'temporal_decoding_time-frequency_awareness_lsvm')
+awareness_tf = load_scores(DECOD_TFR, 'temporal_decoding_time-frequency_awareness_lsvm', average = False)
 
 awareness_tf_se = np.mean(sem(awareness_tf), axis = 0)
 awareness_tf_avg = np.mean(awareness_tf, axis = 0)
@@ -37,11 +37,11 @@ x = awareness_tf
 y = np.full((30, 1024), 0.5)
 
 # Wilcoxon signed-rank test with FDR correction
-reject, p_corrected, awareness_sign_points = wilcoxon_fdr(x, y, times)
+reject, p_corrected, awareness_sign_points = wilcoxon_fdr_tempdecod(x, y, times)
 
 #%% gabor tilt
 
-tilt_tf = load_scores(DECOD_TFR, 'temporal_decoding_time-frequency_tilt_lsvm')
+tilt_tf = load_scores(DECOD_TFR, 'temporal_decoding_time-frequency_tilt_lsvm', average = False)
 
 tilt_tf_se = np.mean(sem(tilt_tf), axis = 0)
 tilt_tf_avg = np.mean(tilt_tf, axis = 0)
@@ -50,7 +50,7 @@ tilt_tf_avg = np.mean(tilt_tf, axis = 0)
 x = tilt_tf
 y = np.full((30, 1024), 0.5)
 
-reject, p_corrected, tilt_sign_points = wilcoxon_fdr(x, y, times)
+reject, p_corrected, tilt_sign_points = wilcoxon_fdr_tempdecod(x, y, times)
 
 #%% plot data with dots for significant comparisons
 

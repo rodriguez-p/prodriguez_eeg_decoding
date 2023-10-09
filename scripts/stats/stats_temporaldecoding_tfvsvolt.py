@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import sem
 from plotting import plot_stats_tfvsvoltage
-from stats import wilcoxon_fdr
+from stats import wilcoxon_fdr_tempdecod
 from utils import load_scores
 
 #%%
@@ -29,7 +29,7 @@ presence_volt_avg = np.mean(presence_volt, axis = 0)
 x = presence_tf
 y = presence_volt
 
-reject, p_corrected, presence_sign_points = wilcoxon_fdr(x, y, times)
+reject, p_corrected, presence_sign_points = wilcoxon_fdr_tempdecod(x, y, times)
 
 # plot data with dots for significant comparisons
 
@@ -56,7 +56,7 @@ awareness_volt_avg = np.mean(awareness_volt, axis = 0)
 x = awareness_tf
 y = awareness_volt
 
-reject, p_corrected, awareness_sign_points = wilcoxon_fdr(x, y, times)
+reject, p_corrected, awareness_sign_points = wilcoxon_fdr_tempdecod(x, y, times)
 
 # plot data with dots for significant comparisons
 
@@ -83,7 +83,7 @@ tilt_volt_avg = np.mean(tilt_volt, axis = 0)
 x = tilt_tf
 y = tilt_volt
 
-reject, p_corrected, tilt_sign_points = wilcoxon_fdr(x, y, times)
+reject, p_corrected, tilt_sign_points = wilcoxon_fdr_tempdecod(x, y, times)
 
 # plot data with dots for significant comparisons
 
